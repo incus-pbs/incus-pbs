@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+if [ -d /run/systemd/system ]; then
+	systemctl daemon-reload >/dev/null || true
+fi
+# purge: drop run history and staging leftovers. /etc/incus-pbs (token and
+# encryption key) is never removed automatically: losing the key makes every
+# encrypted backup unrestorable.
+if [ "$1" = "purge" ]; then
+	rm -rf /var/lib/incus-pbs /var/cache/incus-pbs
+fi

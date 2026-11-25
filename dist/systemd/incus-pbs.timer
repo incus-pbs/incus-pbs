@@ -1,0 +1,14 @@
+[Unit]
+Description=Scheduled Incus backups to Proxmox Backup Server
+
+[Timer]
+# A tick every 5 minutes. Each run backs up only what is due: instances by
+# their own user.incus-pbs.schedule, everything else by backup.schedule.
+# A tick that finds nothing due exits immediately, and a tick that hits a
+# running backup is skipped (missed slots fire once on the next tick).
+OnCalendar=*:0/5
+Persistent=true
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

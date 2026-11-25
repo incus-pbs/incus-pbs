@@ -1,0 +1,40 @@
+[Unit]
+Description=Back up Incus instances to Proxmox Backup Server
+Requires=incus.service
+After=incus.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/incus-pbs/config.yaml
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/incus-pbs --config /etc/incus-pbs/config.yaml backup --scheduled
+# JSON logs go to journald; `journalctl -u incus-pbs -o cat | jq` to read them.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=incus-pbs
+# SIGTERM -> the client is interrupted (SIGINT), temporary snapshots, clones and
+# mounts are cleaned up, then the process exits. Give that time before SIGKILL.
+KillSignal=SIGTERM
+KillMode=mixed
+TimeoutStopSec=15min
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+# Needs root: Incus socket, zfs clone/destroy, mount. Hardening that does not
+# break those operations:
+UMask=0077
+NoNewPrivileges=yes
+ProtectHome=read-only
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+LockPersonality=yes
+CacheDirectory=incus-pbs
+CacheDirectoryMode=0700
+StateDirectory=incus-pbs
+StateDirectoryMode=0700
+# OnFailure=notify-failure@%n.service
+
+[Install]
+WantedBy=multi-user.target

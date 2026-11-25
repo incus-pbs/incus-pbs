@@ -1,0 +1,104 @@
+version: 2
+
+project_name: incus-pbs
+
+# dist/ holds tracked files (systemd units), so build output goes elsewhere.
+dist: build/goreleaser
+
+before:
+  hooks:
+    - sh scripts/completions.sh
+
+builds:
+  - id: incus-pbs
+    main: ./cmd/incus-pbs
+    binary: incus-pbs
+    env:
+      - CGO_ENABLED=0
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - dist/systemd/incus-pbs.service
+      - dist/systemd/incus-pbs.timer
+      - examples/config.yaml
+      - completions/*
+
+checksum:
+  name_template: SHA256SUMS
+  algorithm: sha256
+
+# Keyless signature of SHA256SUMS (GitHub OIDC identity of the release
+# workflow). Verify with:
+#   cosign verify-blob --bundle SHA256SUMS.sigstore.json \
+#     --certificate-identity-regexp 'https://github.com/incus-pbs/incus-pbs/.github/workflows/release.yml@refs/tags/v.+' \
+#     --certificate-oidc-issuer https://token.actions.githubusercontent.com SHA256SUMS
+signs:
+  - cmd: cosign
+    artifacts: checksum
+    signature: "${artifact}.sigstore.json"
+    args: ["sign-blob", "--bundle=${signature}", "${artifact}", "--yes"]
+
+# SPDX SBOM per archive and package (syft).
+sboms:
+  - artifacts: archive
+  - id: packages
+    artifacts: package
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  use: github-native
+
+release:
+  draft: false
+  prerelease: auto
+
+nfpms:
+  - id: deb
+    package_name: incus-pbs
+    file_name_template: "{{ .PackageName }}_{{ .Version }}_{{ .Arch }}"
+    formats: [deb]
+    description: Back up Incus instances to Proxmox Backup Server.
+    maintainer: Jan-Philipp Benecke <jan-philipp@bnck.me>
+    section: admin
+    homepage: https://github.com/incus-pbs/incus-pbs
+    license: MIT
+    priority: optional
+    bindir: /usr/bin
+    recommends:
+      - proxmox-backup-client
+    suggests:
+      - libproxmox-backup-qemu0
+    contents:
+      - src: dist/systemd/incus-pbs.service
+        dst: /usr/lib/systemd/system/incus-pbs.service
+      - src: dist/systemd/incus-pbs.timer
+        dst: /usr/lib/systemd/system/incus-pbs.timer
+      - src: completions/incus-pbs.bash
+        dst: /usr/share/bash-completion/completions/incus-pbs
+      - src: completions/_incus-pbs
+        dst: /usr/share/zsh/vendor-completions/_incus-pbs
+      - src: examples/config.yaml
+        dst: /usr/share/doc/incus-pbs/examples/config.yaml
+      - src: README.md
+        dst: /usr/share/doc/incus-pbs/README.md
+      - src: LICENSE
+        dst: /usr/share/doc/incus-pbs/copyright
+      - dst: /etc/incus-pbs
+        type: dir
+        file_info:
+          mode: 0700
+    scripts:
+      postinstall: packaging/deb/postinst
+      preremove: packaging/deb/prerm
+      postremove: packaging/deb/postrm

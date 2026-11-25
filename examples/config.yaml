@@ -1,0 +1,86 @@
+# /etc/incus-pbs/config.yaml (mode 0600, owner root)
+# Unknown keys are rejected. Secrets are only referenced by file path.
+
+incus:
+  socket: /var/lib/incus/unix.socket
+  projects:
+    - default
+
+pbs:
+  # [[user@realm[!token]@]host[:port]:]datastore
+  repository: "backup@pbs!incus@pbs.example.net:datastore"
+  namespace: incus
+  backup_id: incus-host          # default: hostname
+  # File containing ONLY the API token secret, mode 0600.
+  password_file: /etc/incus-pbs/pbs-token
+  # proxmox-backup-client key create --kdf none /etc/incus-pbs/encryption-key.json
+  # Keep a copy off-host (proxmox-backup-client key paperkey): no key, no restore.
+  encryption_key_file: /etc/incus-pbs/encryption-key.json
+  # sha256 fingerprint of the PBS certificate (needed for self-signed certs).
+  # fingerprint: "aa:bb:...:ff"
+  change_detection_mode: metadata  # legacy | data | metadata
+  # Each instance gets its own group: ct/<name> or vm/<name> ("<project>-<name>"
+  # outside the default project). host/<backup_id> holds the run index,
+  # metadata, host config and shared/standalone volumes.
+  # timeout: 6h                    # abort the upload after this long (default: none)
+  # Patterns for all pxar archives (container archives have rootfs/ at the top).
+  exclude_patterns:
+    - "/rootfs/tmp/*"
+    - "/rootfs/var/cache/apt/archives/*.deb"
+  # rate_limit: 100MiB             # upload bandwidth limit (default: unlimited)
+
+storage:
+  staging_directory: /var/cache/incus-pbs   # mount points + metadata only, no exports
+  staging_dataset_name: incus-pbs-staging   # <pool dataset>/incus-pbs-staging (per Incus pool) holds temporary clones
+  min_free_bytes: 1073741824
+  state_directory: /var/lib/incus-pbs       # last run + per-target history (status, metrics)
+
+backup:
+  # Cron expression (host local time; "CRON_TZ=Europe/Berlin ..." to pin a
+  # zone) used by `backup --scheduled` (the systemd timer) for instances
+  # without their own schedule, for shared and standalone volumes and for
+  # the run index. Per instance:
+  #   incus config set web user.incus-pbs.schedule "0 */6 * * *"
+  #   incus config set lab user.incus-pbs.schedule off
+  # Volumes used by exactly one instance follow that instance.
+  schedule: "30 2 * * *"
+  include_custom_volumes: true
+  include_host_config: true
+  parallelism: 2
+  # abort: any target that cannot be prepared fails the run, no PBS snapshot is created.
+  # skip:  back up the rest; the manifest marks the snapshot incomplete and the
+  #        run exits with code 2.
+  on_instance_error: abort
+  exclude: []                  # "name" or "project/name"
+  snapshot_expiry: 24h         # safety net for temporary snapshots
+  lock_file: /run/incus-pbs.lock
+  # Remove leftovers (own snapshots/clones/mounts) of a crashed previous run
+  # automatically. Safe: the run lock guarantees no other run owns them.
+  auto_cleanup: true
+  # Changed-block tracking for VM disks and block volumes (docs/block-incremental.md).
+  # Needs libproxmox-backup-qemu0; without it, block devices are read in full.
+  #   auto   - only for zvols without other ZFS snapshots (keeps `incus snapshot restore` working)
+  #   always - also with snapshots (release with `incus-pbs cleanup --release-bookmarks`)
+  #   off
+  block_incremental: auto
+  block_full_interval: 168h    # force a full read at least weekly
+
+# See docs/hooks.md. Commands are argv lists, never shell strings.
+hooks:
+  pre_backup: []
+  #  - name: dump-db
+  #    instance: prod/db
+  #    command: [sh, -c, "mariadb-dump --all-databases --single-transaction > /var/backups/all.sql"]
+  #    timeout: 15m
+  post_snapshot: []
+  post_backup: []
+  #  - name: notify
+  #    command: [/usr/local/lib/incus-pbs/hooks/notify.sh]
+
+monitoring:
+  # node_exporter textfile collector output ("" disables), see docs/monitoring.md
+  textfile_path: ""
+
+logging:
+  level: info
+  format: json

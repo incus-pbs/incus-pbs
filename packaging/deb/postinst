@@ -1,0 +1,7 @@
+#!/bin/sh
+set -e
+# The timer is not enabled here: it needs /etc/incus-pbs/config.yaml and
+# credentials first. See /usr/share/doc/incus-pbs/README.md.
+if [ -d /run/systemd/system ]; then
+	systemctl daemon-reload >/dev/null || true
+fi

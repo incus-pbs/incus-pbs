@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180" role="img" aria-label="incus-pbs logo">
+  <rect width="180" height="180" rx="36" fill="#0F2E4A"/>
+  <rect x="46" y="40" width="90" height="9" rx="4.5" fill="#4FD1A5" fill-opacity="0.4"/>
+  <rect x="46" y="56" width="90" height="9" rx="4.5" fill="#4FD1A5" fill-opacity="0.7"/>
+  <rect x="46" y="72" width="90" height="9" rx="4.5" fill="#4FD1A5"/>
+  <path transform="translate(30.5,54.4) scale(0.7)" fill="#FFFFFF" d="M20 62 Q45 60 60 58 L150 58 L150 82 L120 82 Q108 92 108 108 L130 108 L130 124 L50 124 L50 108 L72 108 Q72 92 60 82 L52 82 Q34 80 20 62 Z"/>
+</svg>
