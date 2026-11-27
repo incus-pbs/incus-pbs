@@ -1,0 +1,32 @@
+name: release-drafter
+on:
+  push:
+    branches: [main]
+  # pull_request_target so fork PRs can be labelled too. Neither job checks out
+  # or runs code from the pull request.
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited]
+permissions:
+  contents: read
+jobs:
+  # Keep the draft release for the next version up to date.
+  update-draft:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: release-drafter
+      cancel-in-progress: false
+    permissions:
+      contents: write       # create and edit the draft release
+      pull-requests: read   # read merged pull requests and their labels
+    steps:
+      - uses: release-drafter/release-drafter@d1a19e60e81a7e650d00a7de9277f87e439117ea # v7.11.0
+
+  # Label pull requests from their title, branch and changed files.
+  autolabel:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write  # add labels
+    steps:
+      - uses: release-drafter/release-drafter/autolabeler@d1a19e60e81a7e650d00a7de9277f87e439117ea # v7.11.0

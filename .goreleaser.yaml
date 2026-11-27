@@ -56,12 +56,18 @@ sboms:
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
 
+# Release notes come from the draft maintained by release-drafter
+# (.github/release-drafter.yml), so GoReleaser does not generate a changelog.
 changelog:
-  use: github-native
+  disable: true
 
 release:
   draft: false
   prerelease: auto
+  # Adopt the draft release named after the tag, keep its notes, upload the
+  # artifacts and publish it.
+  use_existing_draft: true
+  mode: keep-existing
 
 nfpms:
   - id: deb
