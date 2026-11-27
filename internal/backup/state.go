@@ -23,6 +23,9 @@ type State struct {
 	// index content (host config, shared and standalone volumes).
 	HostLastAttempt time.Time              `json:"host_last_attempt,omitempty"`
 	Targets         map[string]TargetState `json:"targets"`
+	// RestoreTests holds the last `restore test` drill per source instance,
+	// keyed like Targets.
+	RestoreTests map[string]RestoreTestState `json:"restore_tests,omitempty"`
 }
 
 // TargetState is the per-target history.
@@ -86,6 +89,7 @@ func (s *State) Record(rep *Report) {
 				delete(s.Targets, k)
 			}
 		}
+		s.forgetRestoreTests(known)
 	}
 	for _, it := range rep.Items {
 		key := TargetKey(it.Kind, it.Project, it.Name)
@@ -229,6 +233,7 @@ func (s *State) Metrics() string {
 			fmt.Fprintf(&b, "%s{kind=%q,project=%q,name=%q} %.0f\n", m.name, string(t.Kind), t.Project, t.Name, ts(m.v(t)))
 		}
 	}
+	s.restoreTestMetrics(&b)
 	return b.String()
 }
 

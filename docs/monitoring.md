@@ -16,7 +16,7 @@ journalctl -u incus-pbs -o cat | jq -c 'select(.level=="ERROR")'
 | Upload and cleanup | `pbs_upload_failed` (with the client output tail), `crash_recovery`, `cleanup_step_failed`, `cleanup_incomplete` |
 | Block images | `block_image_completed` (mode incremental/full, reason, chunks read/zero/uploaded), `bookmarks_released`, `block_upload_failed` / `block_session_failed` (fallback to the client), `block_incremental_unavailable` |
 | Hooks | `hook_completed`, `hook_failed`, `hook_skipped` |
-| Restore | `archive_restored`, `instance_restored`, `volume_restored`, `restore_failed` |
+| Restore | `archive_restored`, `instance_restored`, `volume_restored`, `restore_failed`, `restore_test_ok`, `restore_test_failed`, `restore_test_cleanup_failed`, `restore_test_stale_copy` |
 
 ## status command
 
@@ -52,6 +52,12 @@ The file is rewritten atomically after every run that did something. Scheduled t
 | `incus_pbs_target_last_success_timestamp_seconds{kind,project,name}` | Per instance/volume |
 | `incus_pbs_target_next_due_timestamp_seconds{kind,project,name}` | Next schedule slot after the last attempt |
 | `incus_pbs_target_expected_by_timestamp_seconds{kind,project,name}` | First schedule slot after the last success; past it (plus grace) the target is overdue. 0 if it never succeeded |
+| `incus_pbs_restore_test_last_run_timestamp_seconds{kind,project,name}` | End of the last `restore test` drill of each instance |
+| `incus_pbs_restore_test_last_success_timestamp_seconds{kind,project,name}` | End of the last successful drill; 0 if none succeeded |
+| `incus_pbs_restore_test_last_ok{kind,project,name}` | 1 if the last drill restored, started and found all files |
+| `incus_pbs_restore_test_last_duration_seconds{kind,project,name}`, `_boot_seconds` | Drill duration, and time until the first file check answered |
+
+Every `restore test` records its result in the state file and rewrites the textfile, so drill results appear without a backup run. A drill that fails before the backup is located (PBS unreachable, no backup yet) updates the existing entry of that instance; without one (for example a mistyped name) only its exit code reports the failure. Drills of instances that a complete backup plan no longer contains are forgotten, like targets. `status` lists the drills but does not fail on them; alert on the metrics instead.
 
 Example alert rules:
 
@@ -69,6 +75,11 @@ groups:
       summary: "{{ $labels.kind }} {{ $labels.project }}/{{ $labels.name }} missed its backup schedule"
   - alert: IncusBackupFailed
     expr: incus_pbs_last_run_exit_code != 0
+  - alert: IncusRestoreDrillFailed
+    expr: incus_pbs_restore_test_last_ok == 0
+  - alert: IncusRestoreDrillOverdue      # adjust to the drill timers' period
+    expr: time() - incus_pbs_restore_test_last_success_timestamp_seconds > 35*86400
+    for: 1h
 ```
 
 ## systemd

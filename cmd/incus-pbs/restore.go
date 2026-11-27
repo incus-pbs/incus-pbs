@@ -148,6 +148,7 @@ func restoreCommand() *cli.Command {
 						Files: c.StringSlice("file"), Contains: c.String("contains"),
 						Timeout: c.Duration("timeout"), Keep: c.Bool("keep"),
 					})
+					recordRestoreTest(rt.cfg, rt.log, restoreTestState(c.String("project"), c.Args().Get(1), res, err, time.Now()))
 					return restoreResult(rt, "test", res, err)
 				})),
 			},
@@ -290,4 +291,24 @@ func printGuestManifest(rt *runtime, snap string, m *backup.GuestManifest) {
 		tbl.AppendRow(table.Row{t.Kind, t.Project, t.Name, t.Pool.Name, dash(t.Schedule), strings.Join(t.Archives(), ",")})
 	}
 	tbl.Render()
+}
+
+// restoreTestState turns a drill result into its state entry. The source
+// instance is taken from the restore result when the backup was found, else
+// from the command line (the kind is then unknown).
+func restoreTestState(project, instance string, res *restore.TestResult, err error, end time.Time) backup.RestoreTestState {
+	r := backup.RestoreTestState{Project: project, Name: instance, LastRun: end, LastOK: err == nil && res != nil && res.OK}
+	if res != nil {
+		r.DurationSeconds, r.BootSeconds = res.Seconds, res.BootSeconds
+		if rr := res.Restore; rr != nil {
+			r.Kind, r.Snapshot = rr.Kind, rr.Snapshot
+			if p, n, ok := strings.Cut(rr.Source, "/"); ok {
+				r.Project, r.Name = p, n
+			}
+		}
+	}
+	if err != nil {
+		r.LastError = err.Error()
+	}
+	return r
 }

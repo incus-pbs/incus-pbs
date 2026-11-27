@@ -137,12 +137,22 @@ func cmdBackup(ctx context.Context, c *cli.Command, rt *runtime) error {
 // recordRun persists the report in the state directory and refreshes the
 // Prometheus textfile. Failures here never change the backup exit code.
 func recordRun(cfg config.Config, log *slog.Logger, rep *backup.Report) {
+	updateState(cfg, log, func(st *backup.State) { st.Record(rep) })
+}
+
+// recordRestoreTest persists a drill result like recordRun; it never changes
+// the drill's exit code either. The caller holds the run lock.
+func recordRestoreTest(cfg config.Config, log *slog.Logger, r backup.RestoreTestState) {
+	updateState(cfg, log, func(st *backup.State) { st.RecordRestoreTest(r) })
+}
+
+func updateState(cfg config.Config, log *slog.Logger, change func(*backup.State)) {
 	st, err := backup.LoadState(cfg.Storage.StateDirectory)
 	if err != nil {
 		log.Error("state_load_failed", "event", "state_load_failed", "error", err)
 		st, _ = backup.LoadState(os.DevNull)
 	}
-	st.Record(rep)
+	change(st)
 	if err := st.Save(cfg.Storage.StateDirectory); err != nil {
 		log.Error("state_save_failed", "event", "state_save_failed", "error", err)
 	}
@@ -233,6 +243,21 @@ func cmdStatus(_ context.Context, c *cli.Command, rt *runtime) error {
 		tbl.AppendRow([]any{t.Kind, t.Project, t.Name, dash(t.Schedule), t.LastStatus, stamp(t.LastSuccess, "never"), stamp(t.NextDue, "-"), dash(t.LastError)})
 	}
 	tbl.Render()
+	if len(st.RestoreTests) > 0 {
+		fmt.Fprintln(out)
+		rtbl := newTable(out, "RESTORE DRILL", "LAST RUN", "RESULT", "LAST SUCCESS", "SNAPSHOT", "ERROR")
+		for _, k := range st.RestoreTestKeys() {
+			r := st.RestoreTests[k]
+			result := "ok"
+			if !r.LastOK {
+				result = "FAILED"
+			}
+			errLine, _, _ := strings.Cut(r.LastError, "\n")
+			rtbl.AppendRow([]any{fmt.Sprintf("%s %s/%s", r.Kind, r.Project, r.Name), stamp(r.LastRun, "-"), result,
+				stamp(r.LastSuccess, "never"), dash(r.Snapshot), dash(errLine)})
+		}
+		rtbl.Render()
+	}
 	for _, p := range problems {
 		fmt.Fprintln(out, "PROBLEM:", p)
 	}

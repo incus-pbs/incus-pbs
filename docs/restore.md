@@ -84,6 +84,7 @@ incus-pbs restore test latest db  --file /etc/os-release --contains 'ID=debian' 
 - The copy is force-stopped and deleted afterwards, also when a check fails or the run is interrupted. `--keep` leaves it stopped for inspection.
 - Copies carry the `user.incus-pbs.restore-test` config key and are never included in backups.
 - Exit code 0 means restored, started and all files found; 1 means any step failed (including cleanup, which then names the instance to remove manually). A JSON result is printed either way.
+- The result is recorded in the state file: `status` lists the last drill per instance, and `monitoring.textfile_path` gets `incus_pbs_restore_test_*` metrics (see [monitoring](monitoring.md#prometheus-node_exporter-textfile-collector)). A drill refused because another run holds the lock records nothing.
 
 A weekly drill as a systemd unit pair:
 
