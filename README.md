@@ -39,13 +39,13 @@ See [docs/architecture.md](docs/architecture.md) for the full picture: component
 
 Releases on GitHub ship a `.deb` package and a tarball for amd64 and arm64, plus `SHA256SUMS`. Stable releases are also published to an apt repository.
 
-### APT repository (Debian / Ubuntu / Proxmox)
+### APT repository (Debian / Ubuntu)
 
 The repository is hosted by [Cloudsmith](https://cloudsmith.com) and signed with its GPG key.
 
 ```bash
 curl -fsSL https://dl.cloudsmith.io/public/incus-pbs/incus-pbs/gpg.7C9342743EF97C60.key | gpg --dearmor -o /usr/share/keyrings/incus-pbs.gpg
-. /etc/os-release   # ID and VERSION_CODENAME, e.g. debian trixie (Proxmox VE reports debian)
+. /etc/os-release   # ID and VERSION_CODENAME, e.g. debian trixie
 echo "deb [signed-by=/usr/share/keyrings/incus-pbs.gpg] https://dl.cloudsmith.io/public/incus-pbs/incus-pbs/deb/$ID $VERSION_CODENAME main" > /etc/apt/sources.list.d/incus-pbs.list
 apt update && apt install incus-pbs
 install -m 600 /usr/share/doc/incus-pbs/examples/config.yaml /etc/incus-pbs/config.yaml   # then edit it
@@ -213,7 +213,11 @@ git push origin v0.2.0
 
 GoReleaser then builds, signs and uploads the artifacts into that draft and publishes it with its notes. If no draft matches the tag, it creates a release with empty notes that can be edited afterwards.
 
-A disposable integration environment (Incus+ZFS host and PBS, as VMs on Proxmox VE) can be built with the scripts in [scripts/testenv/](scripts/testenv/README.md).
+A disposable integration environment (Incus+ZFS host and PBS, as VMs on an Incus host) can be built with the scripts in [scripts/testenv/](scripts/testenv/README.md).
+
+## Trademarks
+
+Proxmox® is a registered trademark of Proxmox Server Solutions GmbH in the EU, the U.S., and other countries. incus-pbs is an independent project, not affiliated with or endorsed by Proxmox Server Solutions GmbH.
 
 ## License
 

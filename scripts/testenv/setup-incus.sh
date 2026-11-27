@@ -4,7 +4,7 @@
 # running test instances: container c1 and VM v1.
 #
 # Run as root on the Incus test VM. Idempotent.
-# Usage: setup-incus.sh <zfs-disk by stable path, e.g. /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1>
+# Usage: setup-incus.sh <zfs-disk by stable path, e.g. /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_incus_zfs>
 # (never /dev/sdX: kernel names can swap across reboots)
 set -euo pipefail
 set -x
@@ -13,7 +13,10 @@ export DEBIAN_FRONTEND=noninteractive
 
 # ZFS (contrib) + headers for dkms.
 if ! command -v zfs >/dev/null; then
-  sed -i 's/^Components: main$/Components: main contrib/' /etc/apt/sources.list.d/debian.sources
+  # Debian cloud images use deb822 debian.sources; the Incus images: image already lists contrib.
+  if [ -f /etc/apt/sources.list.d/debian.sources ]; then
+    sed -i 's/^Components: main$/Components: main contrib/' /etc/apt/sources.list.d/debian.sources
+  fi
   apt-get update -q
   # Cloud images may ship a kernel whose headers are gone from the archive:
   # move to the current kernel + headers; dkms builds ZFS for it.
