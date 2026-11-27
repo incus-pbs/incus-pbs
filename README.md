@@ -37,9 +37,23 @@ See [docs/architecture.md](docs/architecture.md) for the full picture: component
 
 ## Installation
 
-Releases on GitHub ship a `.deb` package and a tarball for amd64 and arm64, plus `SHA256SUMS`.
+Releases on GitHub ship a `.deb` package and a tarball for amd64 and arm64, plus `SHA256SUMS`. Stable releases are also published to an apt repository.
 
-### Debian / Ubuntu package
+### APT repository (Debian / Ubuntu / Proxmox)
+
+The repository is hosted by [Cloudsmith](https://cloudsmith.com) and signed with its GPG key.
+
+```bash
+curl -fsSL https://dl.cloudsmith.io/public/incus-pbs/incus-pbs/gpg.7C9342743EF97C60.key | gpg --dearmor -o /usr/share/keyrings/incus-pbs.gpg
+. /etc/os-release   # ID and VERSION_CODENAME, e.g. debian trixie (Proxmox VE reports debian)
+echo "deb [signed-by=/usr/share/keyrings/incus-pbs.gpg] https://dl.cloudsmith.io/public/incus-pbs/incus-pbs/deb/$ID $VERSION_CODENAME main" > /etc/apt/sources.list.d/incus-pbs.list
+apt update && apt install incus-pbs
+install -m 600 /usr/share/doc/incus-pbs/examples/config.yaml /etc/incus-pbs/config.yaml   # then edit it
+```
+
+`apt upgrade` then keeps it current. The notes on what the package installs (below) apply here too.
+
+### Debian / Ubuntu package (manual download)
 
 ```bash
 VER=x.y.z
