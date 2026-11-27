@@ -1,0 +1,106 @@
+# Release Drafter (v7) keeps a draft release named vX.Y.Z up to date from merged
+# pull requests. Pushing the matching tag lets GoReleaser adopt that draft, attach
+# the artifacts and publish it (see release.use_existing_draft in .goreleaser.yaml).
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+
+categories:
+  - type: 'pre-exclude'
+    when:
+      label: 'skip-changelog'
+
+  - title: '💥 Breaking changes'
+    semver-increment: 'major'
+    exclusive: true
+    when:
+      - label: 'breaking'
+      - conventional:
+          breaking: true
+  - title: '🚀 Features'
+    semver-increment: 'minor'
+    exclusive: true
+    when:
+      - labels: ['feature', 'enhancement']
+      - conventional:
+          type: 'feat'
+  - title: '🐛 Fixes'
+    exclusive: true
+    when:
+      - labels: ['bug', 'fix']
+      - conventional:
+          type: 'fix'
+  - title: '📖 Documentation'
+    exclusive: true
+    when:
+      - label: 'documentation'
+      - conventional:
+          type: 'docs'
+  - title: '⬆️ Dependencies'
+    collapse-after: 5
+    exclusive: true
+    when:
+      - label: 'dependencies'
+      - conventional:
+          type: 'deps'
+  - title: '🧰 Maintenance'
+    exclusive: true
+    when:
+      - labels: ['chore', 'ci']
+      - conventional:
+          types: ['chore', 'ci', 'build', 'refactor', 'test']
+
+  # Anything unlabelled is a patch release.
+  - type: 'version-resolver'
+    semver-increment: 'patch'
+
+change-template: '- $TITLE (#$NUMBER) $AUTHORS'
+# Escape characters that would otherwise turn titles into mentions or markup.
+change-title-escapes: '\<*_&#@`'
+
+template: |
+  ## What's changed
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...$RESOLVED_TAG
+
+# Labels added to pull requests by the autolabeler job.
+autolabeler:
+  - labels: ['breaking']
+    title:
+      - '/^[a-z]+(\(.+\))?!:/'
+  - labels: ['feature']
+    branch:
+      - '/^feat(ure)?\/.+/'
+    title:
+      - '/^feat(\(.+\))?!?:/'
+  - labels: ['fix']
+    branch:
+      - '/^fix\/.+/'
+    title:
+      - '/^fix(\(.+\))?!?:/'
+  - labels: ['documentation']
+    files:
+      - '*.md'
+      - 'docs/**'
+    branch:
+      - '/^docs?\/.+/'
+    title:
+      - '/^docs(\(.+\))?!?:/'
+  - labels: ['dependencies']
+    files:
+      - 'go.mod'
+      - 'go.sum'
+    title:
+      - '/^(deps|build\(deps\))(\(.+\))?!?:/'
+  - labels: ['ci']
+    files:
+      - '.github/**'
+      - '.goreleaser.yaml'
+    title:
+      - '/^ci(\(.+\))?!?:/'
+  - labels: ['chore']
+    branch:
+      - '/^chore\/.+/'
+    title:
+      - '/^chore(\(.+\))?!?:/'

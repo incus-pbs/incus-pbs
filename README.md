@@ -186,7 +186,18 @@ make build
 make release     # goreleaser snapshot into build/goreleaser/ (needs goreleaser)
 ```
 
-Releases are published by GoReleaser when a `v*` tag is pushed.
+### Releasing
+
+[Release Drafter](https://github.com/release-drafter/release-drafter) keeps a draft release up to date from merged pull requests, grouped by label (`breaking`, `feature`/`enhancement`, `fix`/`bug`, `documentation`, `dependencies`, `chore`/`ci`; `skip-changelog` leaves a PR out). Labels are added automatically from conventional PR titles (`feat:`, `fix:`, `docs:`, …), branch names and changed files. Only merged pull requests are listed, so changes should land through PRs rather than direct pushes to `main`.
+
+The draft's name is the next version: `breaking` bumps major, `feature`/`enhancement` bumps minor, anything else bumps patch. To release, check the draft on the Releases page, then push exactly that tag:
+
+```bash
+git tag -a v0.2.0 -m "incus-pbs v0.2.0"
+git push origin v0.2.0
+```
+
+GoReleaser then builds, signs and uploads the artifacts into that draft and publishes it with its notes. If no draft matches the tag, it creates a release with empty notes that can be edited afterwards.
 
 A disposable integration environment (Incus+ZFS host and PBS, as VMs on Proxmox VE) can be built with the scripts in [scripts/testenv/](scripts/testenv/README.md).
 
